@@ -1,0 +1,33 @@
+import numpy as np
+import tensorflow as tf
+from music21 import converter, instrument, note, chord, stream
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Activation
+from tensorflow.keras.utils import to_categorical
+
+def create_midi(prediction_output, output_file):
+    """Converts a sequence of notes and chords into a MIDI file."""
+    offset = 0
+    output_notes = []
+
+    for pattern in prediction_output:
+        if ('.' in pattern) or pattern.isdigit():
+            # Chord
+            notes_in_chord = pattern.split('.')
+            notes = [note.Note(int(n)) for n in notes_in_chord]
+            for n in notes:
+                n.storedInstrument = instrument.Piano()
+            new_chord = chord.Chord(notes)
+            new_chord.offset = offset
+            output_notes.append(new_chord)
+        else:
+            # Note
+            new_note = note.Note(pattern)
+            new_note.offset = offset
+            new_note.storedInstrument = instrument.Piano()
+            output_notes.append(new_note)
+
+        offset += 0.5  # Increment offset for spacing
+
+    midi_stream = stream.Stream(output_notes)
+    midi_stream.write('midi', fp=output_file)
